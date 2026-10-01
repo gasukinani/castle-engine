@@ -1,0 +1,40 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch: # Binibigyang-daan ka nitong i-click ang "Run workflow" kahit kailan
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    container:
+      # Docker image ng CGE na may kasamang FPC, Android SDK, NDK, at Gradle
+      image: kambi/castle-engine-cloud-builds-tools:cge-unstable
+
+    steps:
+      - name: Checkout Fork Repository
+        uses: actions/checkout@v4
+
+      - name: Build and Configure CGE from Fork
+        run: |
+          # I-compile ang castle-engine build tool mula sa iyong mismong fork
+          ./tools/build-tool/castle-engine_compile.sh
+          ln -sf $(pwd)/tools/build-tool/castle-engine /usr/local/bin/castle-engine
+          
+          # Ituro ang CGE path sa iyong fork
+          echo "CASTLE_ENGINE_PATH=$(pwd)" >> $GITHUB_ENV
+
+      - name: Package Portable Editor to Android APK
+        run: |
+          # Target: Portable Editor (TCastleUserInterface based)
+          cd tools/castle-editor-portable
+          castle-engine package --target=android --mode=debug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: castle-editor-portable-apk
+          path: |
+            tools/castle-editor-portable/castle-engine-output/android/*.apk
+            tools/castle-editor-portable/castle-engine-output/android/**/*.apk
